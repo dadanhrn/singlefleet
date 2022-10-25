@@ -88,7 +88,16 @@ func main() {
 ## How it works
 Basically singlefleet is like [singleflight](https://pkg.go.dev/golang.org/x/sync/singleflight), except that on top of the duplicate call suppression, singlefleet also waits for multiple calls and executes them in an execution batch. So, for example, if your call fetches an `Employee` entity, you define the call as if you are fetching multiple `Employee`s.
 
-Singlefleet's execution batching takes two params:
+Not just database calls, singlefleet can also fetch data from anything that supports _multiple get_ (i.e. fetching "multiple rows" in one go) such as
+- [Redis](https://redis.io/commands/mget/)
+- [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-multi-get.html)
+- [MongoDB](https://www.mongodb.com/docs/manual/reference/operator/query/in/)
+- specially-designed REST API endpoints
+- etc.
+
+One thing to note is that the _multiple get_ mechanism should be natively supported by the data source. If you are, for example, simulating the _multiple get_ by executing multiple _single gets_ in multiple goroutines, then you are missing the entire point of this library.
+
+singlefleet's execution batching takes two params:
 - `maxWait` or maximum waiting time, and
 - `maxBatch` or maximum batch size.
 
