@@ -109,5 +109,6 @@ singlefleet's execution batching takes two params:
 whichever comes first. If a given call (identified by their respective `id` argument) is currently in-flight (called and not yet returned), another incoming identical call will not initiate a new batch or be added to a newer pending batch; it will just wait for the result of the previous call (think singleflight).
 
 ## Future plans
-- Panic handling
+- ~~Panic handling~~
 - Make use of generics to enable custom types for `id` and return value
+- Handle runtime.Goexit

@@ -4,9 +4,35 @@
 package singlefleet
 
 import (
+	"bytes"
+	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 )
+
+// errPanic represents a value recovered from a panic.
+// (implementation copied from golang.org/x/sync/singleflight)
+type errPanic struct {
+	value interface{}
+	stack []byte
+}
+
+// Error implements error interface.
+func (e *errPanic) Error() string {
+	return fmt.Sprintf("%v\n\n%s", e.value, e.stack)
+}
+
+// newErrPanic instantiates a new errPanic.
+func newErrPanic(v interface{}) *errPanic {
+	stack := debug.Stack()
+
+	if line := bytes.IndexByte(stack[:], '\n'); line >= 0 {
+		stack = stack[line+1:]
+	}
+
+	return &errPanic{v, stack}
+}
 
 // A Job defines a batched fetch operation. ids contains the IDs of items to be
 // fetched in a given batch (guaranteed to be unique). Resulting values from
@@ -58,6 +84,7 @@ func NewFetcher(job Job, maxWait time.Duration, maxBatch int) *Fetcher {
 // Fetch places a fetch job in the batch pool and returns the result of the
 // operation.
 func (fc *Fetcher) Fetch(id string) (val interface{}, ok bool, err error) {
+	// TODO: move cleanups inside a defer? (handle runtime.Goexit)
 	fc.mu.Lock()
 
 	// Check if given ID is already queued in current batch
@@ -149,7 +176,15 @@ func (fc *Fetcher) FetchNow() bool {
 	return true
 }
 
+// doFetch executes job with panic handling
 func (fc *Fetcher) doFetch(c *batch) {
-	// TODO: handle panic?
+	defer func() {
+		// Recover panic(s) called inside the job
+		if r := recover(); r != nil {
+			c.err = newErrPanic(r)
+		}
+	}()
+
+	// Execute job
 	c.vals, c.err = fc.f(c.ids)
 }
