@@ -47,6 +47,23 @@ func TestFetchErr(t *testing.T) {
 	}
 }
 
+func TestFetchPanic(t *testing.T) {
+	panicMsg := "panic"
+	f := NewFetcher(func(ids []string) (map[string]interface{}, error) {
+		panic(panicMsg)
+	}, 100*time.Millisecond, 1)
+	v, ok, err := f.Fetch("a")
+	if err == nil {
+		t.Errorf("Fetch error = nil; want error = %s", panicMsg)
+	}
+	if ok != false {
+		t.Errorf("Fetch ok = %v, want false", ok)
+	}
+	if v != nil {
+		t.Errorf("unexpected non-nil value %#v", v)
+	}
+}
+
 func TestFetchSingleBatchByMaxBatch(t *testing.T) {
 	var wg sync.WaitGroup
 	var ncall = 0
